@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Subject management')}"></head>
+<body>
+<aside th:replace="~{fragments/nav :: sidebar('subjects')}"></aside>
+<div class="main-shell">
+    <header th:replace="~{fragments/nav :: topbar('Subject management')}"></header>
+    <main class="main-content">
+        <div class="page-heading"><div><div class="eyebrow">Curriculum</div><h1>Subjects</h1><p>Organize your question bank around the subjects taught in your institution.</p></div></div>
+        <div th:if="${successMessage}" class="alert alert-success" role="status" th:text="${successMessage}"></div>
+        <div class="row g-4">
+            <div class="col-lg-4"><section class="card"><div class="card-header px-4 py-3">Add subject</div><div class="card-body p-4">
+                <form method="post" th:action="@{/subjects}" th:object="${subjectForm}">
+                    <div class="mb-3"><label class="form-label" for="subjectName">Subject name</label><input class="form-control" id="subjectName" th:field="*{subjectName}" maxlength="150" required><div class="invalid-feedback d-block" th:errors="*{subjectName}"></div></div>
+                    <div class="mb-3"><label class="form-label" for="subjectCode">Subject code <span class="text-secondary fw-normal">(optional)</span></label><input class="form-control" id="subjectCode" th:field="*{subjectCode}" maxlength="30" placeholder="Generated from subject name if blank"><div class="invalid-feedback d-block" th:errors="*{subjectCode}"></div></div>
+                    <button class="btn btn-primary" type="submit">Add subject</button>
+                </form>
+            </div></section></div>
+            <div class="col-lg-8"><section class="card"><div class="card-header px-4 py-3">Registered subjects</div><div class="table-responsive"><table class="table"><thead><tr><th>Subject</th><th>Code</th><th>Topics</th></tr></thead><tbody>
+                <tr th:each="subject : ${subjects}"><td class="fw-semibold" th:text="${subject.subjectName}"></td><td><span class="badge-soft" th:text="${subject.subjectCode}"></span></td><td><a class="text-decoration-none" th:href="@{/topics}">Manage topics →</a></td></tr>
+                <tr th:if="${#lists.isEmpty(subjects)}"><td colspan="3"><div class="empty-state">No subjects yet. Add one to start building your curriculum.</div></td></tr>
+            </tbody></table></div></section></div>
+        </div>
+    </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script><script th:src="@{/js/app.js}"></script>
+</body>
+</html>

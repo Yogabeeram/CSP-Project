@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Dashboard')}"></head>
+<body>
+<aside th:replace="~{fragments/nav :: sidebar('dashboard')}"></aside>
+<div class="main-shell">
+    <header th:replace="~{fragments/nav :: topbar('Dashboard')}"></header>
+    <main class="main-content">
+        <div class="page-heading">
+            <div>
+                <div class="eyebrow">Overview</div>
+                <h1>Good work starts with a balanced paper.</h1>
+                <p>Manage your question bank, review classifications and build examinations around your curriculum.</p>
+            </div>
+            <a class="btn btn-primary px-3" th:href="@{/papers/generate}">＋ Generate a paper</a>
+        </div>
+
+        <div class="row g-3 mb-4">
+            <div class="col-6 col-xl-3">
+                <div class="card metric-card"><div class="card-body">
+                    <div class="d-flex justify-content-between"><span class="metric-label">Total questions</span><span class="metric-icon">▤</span></div>
+                    <div class="metric-value" th:text="${questionCount}">0</div><div class="metric-note">In your question bank</div>
+                </div></div>
+            </div>
+            <div class="col-6 col-xl-3">
+                <div class="card metric-card"><div class="card-body">
+                    <div class="d-flex justify-content-between"><span class="metric-label">Subjects</span><span class="metric-icon">▣</span></div>
+                    <div class="metric-value" th:text="${subjectCount}">0</div><div class="metric-note">Curriculum areas</div>
+                </div></div>
+            </div>
+            <div class="col-6 col-xl-3">
+                <div class="card metric-card"><div class="card-body">
+                    <div class="d-flex justify-content-between"><span class="metric-label">Generated papers</span><span class="metric-icon">✦</span></div>
+                    <div class="metric-value" th:text="${paperCount}">0</div><div class="metric-note">Saved examinations</div>
+                </div></div>
+            </div>
+            <div class="col-6 col-xl-3">
+                <div class="card metric-card"><div class="card-body">
+                    <div class="d-flex justify-content-between"><span class="metric-label">Pending review</span><span class="metric-icon">✓</span></div>
+                    <div class="metric-value" th:text="${pendingReviewCount}">0</div><div class="metric-note">Questions awaiting faculty approval</div>
+                </div></div>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-xl-8">
+                <section class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center py-3 px-4">
+                        <span>Recent generated papers</span><a class="small text-decoration-none" th:href="@{/papers/generate}">Create paper →</a>
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead><tr><th>Examination</th><th>Subject</th><th>Date</th><th>Marks</th><th></th></tr></thead>
+                            <tbody>
+                            <tr th:each="paper : ${recentPapers}">
+                                <td class="fw-semibold" th:text="${paper.examTitle}"></td>
+                                <td th:text="${paper.subject.subjectName}"></td>
+                                <td th:text="${paper.examDate != null ? #temporals.format(paper.examDate, 'dd MMM yyyy') : #temporals.format(paper.createdAt, 'dd MMM yyyy')}"></td>
+                                <td th:text="${paper.totalMarks}"></td>
+                                <td><a class="btn btn-sm btn-outline-secondary" th:href="@{/papers/{id}(id=${paper.id})}">Open</a></td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(recentPapers)}"><td colspan="5"><div class="empty-state"><div class="empty-state-icon">▤</div>No papers generated yet. Start with your first assessment.</div></td></tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </section>
+            </div>
+            <div class="col-xl-4">
+                <section class="card h-100">
+                    <div class="card-header py-3 px-4">Question difficulty</div>
+                    <div class="card-body px-4">
+                        <div class="d-flex justify-content-between mb-2"><span class="small">Easy</span><span class="small fw-bold" th:text="${easyCount}"></span></div>
+                        <div class="progress mb-4"><div class="progress-bar bg-success" role="progressbar" th:style="|width:${questionCount > 0 ? easyCount * 100 / questionCount : 0}%|"></div></div>
+                        <div class="d-flex justify-content-between mb-2"><span class="small">Medium</span><span class="small fw-bold" th:text="${mediumCount}"></span></div>
+                        <div class="progress mb-4"><div class="progress-bar bg-warning" role="progressbar" th:style="|width:${questionCount > 0 ? mediumCount * 100 / questionCount : 0}%|"></div></div>
+                        <div class="d-flex justify-content-between mb-2"><span class="small">Hard</span><span class="small fw-bold" th:text="${hardCount}"></span></div>
+                        <div class="progress"><div class="progress-bar bg-danger" role="progressbar" th:style="|width:${questionCount > 0 ? hardCount * 100 / questionCount : 0}%|"></div></div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <div class="row g-3 mt-1">
+            <div class="col-md-4"><a class="card h-100 text-decoration-none" th:href="@{/questions/new}"><div class="card-body"><div class="eyebrow">Question bank</div><div class="fw-bold text-dark">Add a question</div><div class="small text-secondary mt-1">Create and classify a new question.</div></div></a></div>
+            <div class="col-md-4"><a class="card h-100 text-decoration-none" th:href="@{/upload}"><div class="card-body"><div class="eyebrow">Bulk tools</div><div class="fw-bold text-dark">Import from Excel</div><div class="small text-secondary mt-1">Bring an existing question bank into the app.</div></div></a></div>
+            <div class="col-md-4"><a class="card h-100 text-decoration-none" th:href="@{/review}"><div class="card-body"><div class="eyebrow">Faculty review</div><div class="fw-bold text-dark">Review AI suggestions</div><div class="small text-secondary mt-1">Approve classifications before exam use.</div></div></a></div>
+        </div>
+    </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script th:src="@{/js/app.js}"></script>
+</body>
+</html>

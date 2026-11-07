@@ -1,0 +1,113 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Question bank')}"></head>
+<body>
+<aside th:replace="~{fragments/nav :: sidebar('questions')}"></aside>
+<div class="main-shell">
+    <header th:replace="~{fragments/nav :: topbar('Question bank')}"></header>
+    <main class="main-content">
+        <div class="page-heading">
+            <div><div class="eyebrow">Question bank</div><h1>Questions</h1><p>Search and manage the questions available for paper generation.</p></div>
+            <a class="btn btn-primary" th:href="@{/questions/new}">＋ Add question</a>
+        </div>
+        <div th:if="${successMessage}" class="alert alert-success" role="status" th:text="${successMessage}"></div>
+        <div th:if="${errorMessage}" class="alert alert-danger" role="alert" th:text="${errorMessage}"></div>
+        <div id="questionListMessage" class="alert d-none" role="alert" aria-live="polite"></div>
+        <section class="card mb-4">
+            <div class="card-body">
+                <form method="get" th:action="@{/questions}" class="row g-3 align-items-end">
+                    <div class="col-sm-6 col-lg-2"><label class="form-label" for="subjectFilter">Subject</label>
+                        <select class="form-select" id="subjectFilter" name="subjectId"><option value="">All subjects</option>
+                            <option th:each="subject : ${subjects}" th:value="${subject.id}" th:text="${subject.subjectName}" th:selected="${subject.id == selectedSubjectId}"></option>
+                        </select>
+                    </div>
+                    <div class="col-sm-6 col-lg-2"><label class="form-label" for="topicFilter">Topic</label>
+                        <select class="form-select" id="topicFilter" name="topicId"><option value="">All topics</option>
+                            <option th:each="topic : ${topics}" th:value="${topic.id}" th:attr="data-subject-id=${topic.subject.id}" th:text="${topic.topicName}" th:selected="${topic.id == selectedTopicId}"></option>
+                        </select>
+                    </div>
+                    <div class="col-sm-6 col-lg-2"><label class="form-label" for="unitFilter">Unit</label><input class="form-control" id="unitFilter" name="unitNumber" type="number" min="1" placeholder="Any unit" th:value="${selectedUnitNumber}"></div>
+                    <div class="col-sm-6 col-lg-2"><label class="form-label" for="difficultyFilter">Difficulty</label>
+                        <select class="form-select" id="difficultyFilter" name="difficulty"><option value="">All levels</option>
+                            <option th:each="difficulty : ${difficulties}" th:value="${difficulty}" th:text="${difficulty}" th:selected="${difficulty == selectedDifficulty}"></option>
+                        </select>
+                    </div>
+                    <div class="col-sm-6 col-lg-2"><label class="form-label" for="bloomFilter">Bloom level</label>
+                        <select class="form-select" id="bloomFilter" name="bloomLevel"><option value="">All levels</option>
+                            <option th:each="level : ${bloomLevels}" th:value="${level}" th:text="${level}" th:selected="${level == selectedBloomLevel}"></option>
+                        </select>
+                    </div>
+                    <div class="col-sm-6 col-lg-2 d-flex gap-2"><button class="btn btn-primary flex-grow-1" type="submit">Filter</button><a class="btn btn-outline-secondary" th:href="@{/questions}">Reset</a></div>
+                </form>
+            </div>
+        </section>
+        <section class="card">
+            <div class="card-header d-flex justify-content-between align-items-center px-4 py-3"><span>Question records</span><span id="questionResultCount" class="badge-soft" th:text="${#lists.size(questions)} + ' results'"></span></div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead><tr><th>Question</th><th>Subject / topic</th><th>Unit</th><th>Marks</th><th>Difficulty</th><th>Bloom level</th><th>Status</th><th></th></tr></thead>
+                    <tbody>
+                    <tr th:each="question : ${questions}" data-question-row>
+                        <td><div class="question-text" th:text="${question.questionText}"></div><div class="text-secondary mt-1" style="font-size:10px" th:text="'ID ' + question.id"></div></td>
+                        <td><div class="fw-semibold" th:text="${question.subjectName}"></div><div class="text-secondary" th:text="${question.topicName}"></div></td>
+                        <td th:text="${question.unitNumber}"></td><td th:text="${question.marks}"></td>
+                        <td><span class="badge-soft" th:classappend="${question.difficulty == T(com.college.questionpapergenerator.entity.Difficulty).EASY ? ' badge-easy' : (question.difficulty == T(com.college.questionpapergenerator.entity.Difficulty).HARD ? ' badge-hard' : ' badge-medium')}" th:text="${question.difficulty}"></span></td>
+                        <td><span class="badge-soft" th:text="${question.bloomLevel}"></span></td>
+                        <td><span class="badge-soft" th:classappend="${question.approved ? ' badge-easy' : ' badge-review'}" th:text="${question.approved ? 'Approved' : 'Review'}"></span></td>
+                        <td class="text-nowrap"><a class="btn btn-sm btn-outline-secondary" th:href="@{/questions/{id}/edit(id=${question.id})}">Edit</a>
+                            <button class="btn btn-sm btn-outline-danger" type="button" th:attr="data-delete-id=${question.id}">Delete</button></td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(questions)}"><td colspan="8"><div class="empty-state"><div class="empty-state-icon">⌕</div>No questions match these filters. Add a question or change your search.</div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</div>
+<script>
+document.querySelectorAll("[data-delete-id]").forEach((button) => {
+    button.addEventListener("click", async () => {
+        if (!window.confirm("Delete this question? This cannot be undone.")) return;
+        const message = document.getElementById("questionListMessage");
+        try {
+            const response = await fetch(`/api/questions/${button.dataset.deleteId}`, { method: "DELETE" });
+            if (response.ok) {
+                button.closest("[data-question-row]").remove();
+                const remaining = document.querySelectorAll("[data-question-row]").length;
+                document.getElementById("questionResultCount").textContent = `${remaining} results`;
+                message.className = "alert alert-success";
+                message.textContent = "Question deleted successfully.";
+                if (remaining === 0) {
+                    const emptyRow = document.createElement("tr");
+                    emptyRow.innerHTML = '<td colspan="8"><div class="empty-state"><div class="empty-state-icon">⌕</div>No questions match these filters. Add a question or change your search.</div></td>';
+                    document.querySelector("tbody").append(emptyRow);
+                }
+            } else {
+                const body = await response.json().catch(() => ({}));
+                message.className = "alert alert-danger";
+                message.textContent = body.message || "Could not delete the question. It may already be included in an examination paper.";
+            }
+        } catch (error) {
+            message.className = "alert alert-danger";
+            message.textContent = "Could not reach the application. Check the server connection and try again.";
+        }
+    });
+});
+function filterTopicOptions(subjectId) {
+    document.querySelectorAll("#topicFilter option[data-subject-id]").forEach((option) => {
+        option.hidden = subjectId !== "" && option.dataset.subjectId !== subjectId;
+    });
+}
+document.getElementById("subjectFilter").addEventListener("change", (event) => {
+    const topicFilter = document.getElementById("topicFilter");
+    const selectedTopic = topicFilter.selectedOptions[0];
+    if (selectedTopic?.dataset.subjectId && selectedTopic.dataset.subjectId !== event.target.value) {
+        topicFilter.value = "";
+    }
+    filterTopicOptions(event.target.value);
+});
+filterTopicOptions(document.getElementById("subjectFilter").value);
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script><script th:src="@{/js/app.js}"></script>
+</body>
+</html>

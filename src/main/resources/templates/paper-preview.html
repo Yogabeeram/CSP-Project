@@ -1,0 +1,41 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Generated paper preview')}"></head>
+<body>
+<aside th:replace="~{fragments/nav :: sidebar('generate')}"></aside>
+<div class="main-shell">
+    <header th:replace="~{fragments/nav :: topbar('Generated paper preview')}"></header>
+    <main class="main-content">
+        <div class="page-heading"><div><div class="eyebrow">Saved examination</div><h1>Paper preview</h1><p>This preview uses the questions saved with this examination. PDF download preserves the same selection and order.</p></div><div class="d-flex gap-2"><a class="btn btn-outline-secondary" th:href="@{/papers/generate}">New paper</a><a class="btn btn-primary" th:href="@{/papers/{id}/download(id=${paper.id})}">↓ Download PDF</a></div></div>
+        <section class="paper-sheet">
+            <div class="eyebrow text-center">Question paper</div>
+            <div class="text-center fw-semibold" th:text="${paper.examType.name() == 'SEMESTER' ? 'Semester Examination' : 'Mid Examination'}"></div>
+            <h2 class="h4 fw-bold" th:text="${paper.examTitle}"></h2>
+            <h3 class="h6 text-secondary mt-2" th:text="${paper.subject.subjectName}"></h3>
+            <div class="paper-meta mt-4 mb-4">
+                <div><span class="text-secondary">Examination date:</span> <strong th:text="${paper.examDate != null ? #temporals.format(paper.examDate, 'dd MMMM yyyy') : 'To be announced'}"></strong></div>
+                <div><span class="text-secondary">Duration:</span> <strong th:text="${paper.duration} + ' minutes'"></strong></div>
+                <div><span class="text-secondary">Maximum marks:</span> <strong th:text="${paper.totalMarks}"></strong></div>
+                <div><span class="text-secondary">Questions:</span> <strong th:text="${paper.totalQuestions}"></strong></div>
+            </div>
+            <h4 class="h6 fw-bold mb-3">General instructions</h4>
+            <ol class="small text-secondary mb-4"><li>Answer all questions unless a section specifies otherwise.</li><li>Write the question number clearly against each answer.</li><li>Figures in brackets indicate the marks for each question.</li><li>Do not use unauthorized materials or electronic devices.</li></ol>
+            <div class="mb-4">
+                <h4 class="h6 fw-bold">Bloom’s Taxonomy distribution</h4>
+                <div class="d-flex flex-wrap gap-2 mt-2"><span class="badge-soft" th:each="level : ${T(com.college.questionpapergenerator.entity.BloomLevel).values()}" th:text="|${level} · ${bloomCounts.get(level)}|"></span></div>
+            </div>
+            <section th:each="paperQuestion, stat : ${paperQuestions}">
+                <h4 class="h6 fw-bold mt-4" th:if="${stat.index == 0 or paperQuestion.sectionName != paperQuestions[stat.index - 1].sectionName}" th:text="${paperQuestion.sectionName.startsWith('Section ') ? paperQuestion.sectionName : 'Section ' + paperQuestion.sectionName}"></h4>
+                <div class="paper-question">
+                    <span class="paper-question-number" th:text="${paperQuestion.questionNumber} + '.'"></span>
+                    <span class="paper-question-body" th:text="${paperQuestion.question.questionText}"></span>
+                    <span class="paper-marks" th:text="|[${paperQuestion.marks} marks]|"></span>
+                </div>
+            </section>
+            <div th:if="${#lists.isEmpty(paperQuestions)}" class="empty-state">No saved questions were found for this paper.</div>
+        </section>
+    </main>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script><script th:src="@{/js/app.js}"></script>
+</body>
+</html>

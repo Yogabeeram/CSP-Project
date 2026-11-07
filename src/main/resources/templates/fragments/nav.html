@@ -1,0 +1,54 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<body>
+<aside th:fragment="sidebar(activePage)" class="app-sidebar">
+    <a class="brand-mark" th:href="@{/}">
+        <span class="brand-icon">▤</span>
+        <span>
+            <span class="brand-title d-block">Question Studio</span>
+            <span class="brand-caption">Academic assessment tools</span>
+        </span>
+    </a>
+    <nav class="app-nav nav flex-column" aria-label="Main navigation">
+        <div class="nav-section-label">Workspace</div>
+        <a class="nav-link" th:classappend="${activePage == 'dashboard' ? ' active' : ''}" th:href="@{/}">
+            <span class="nav-symbol">⌂</span> Dashboard
+        </a>
+        <a class="nav-link" th:classappend="${activePage == 'questions' ? ' active' : ''}" th:href="@{/questions}">
+            <span class="nav-symbol">▤</span> Question bank
+        </a>
+        <a class="nav-link" th:classappend="${activePage == 'upload' ? ' active' : ''}" th:href="@{/upload}">
+            <span class="nav-symbol">⇧</span> Excel upload
+        </a>
+        <a class="nav-link" th:classappend="${activePage == 'review' ? ' active' : ''}" th:href="@{/review}">
+            <span class="nav-symbol">✓</span> AI review
+        </a>
+        <div class="nav-section-label">Assessment setup</div>
+        <a class="nav-link" th:classappend="${activePage == 'subjects' ? ' active' : ''}" th:href="@{/subjects}">
+            <span class="nav-symbol">▣</span> Subjects
+        </a>
+        <a class="nav-link" th:classappend="${activePage == 'topics' ? ' active' : ''}" th:href="@{/topics}">
+            <span class="nav-symbol">≡</span> Topics &amp; units
+        </a>
+        <a class="nav-link" th:classappend="${activePage == 'generate' ? ' active' : ''}" th:href="@{/papers/generate}">
+            <span class="nav-symbol">✦</span> Generate paper
+        </a>
+    </nav>
+    <div class="mt-4 p-3 rounded-3" style="background:#24445d">
+        <div class="small fw-semibold">Faculty workspace</div>
+        <div class="brand-caption mt-1">Build balanced assessments with reviewed questions.</div>
+    </div>
+</aside>
+
+<header th:fragment="topbar(title)" class="topbar">
+    <div class="d-flex align-items-center gap-3">
+        <button class="btn btn-sm btn-outline-secondary mobile-menu-button" type="button" data-sidebar-toggle aria-label="Toggle navigation">☰</button>
+        <div>
+            <div class="topbar-kicker" th:text="${collegeName} + ' · Automated Question Paper Generator'">Automated Question Paper Generator</div>
+            <h2 class="topbar-title" th:text="${title}">Dashboard</h2>
+        </div>
+    </div>
+    <a class="btn btn-sm btn-teal" th:href="@{/papers/generate}">＋ New paper</a>
+</header>
+</body>
+</html>

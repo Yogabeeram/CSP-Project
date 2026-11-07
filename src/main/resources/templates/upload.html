@@ -1,0 +1,107 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('Question bank upload')}"></head>
+<body>
+<aside th:replace="~{fragments/nav :: sidebar('upload')}"></aside>
+<div class="main-shell">
+    <header th:replace="~{fragments/nav :: topbar('Question bank upload')}"></header>
+    <main class="main-content">
+        <div class="page-heading"><div><div class="eyebrow">Bulk tools</div><h1>Import questions</h1><p>Upload an Excel question bank to add validated rows. Subject codes are optional when creating subjects, and topic reference PDFs are optional.</p></div><a class="btn btn-outline-secondary" th:href="@{/api/questions/upload/template}">↓ Download template</a></div>
+        <div id="uploadMessage" class="alert d-none" role="status" aria-live="polite"></div>
+        <div class="row g-4">
+            <div class="col-lg-7">
+                <section class="card"><div class="card-body p-4 p-lg-5">
+                    <div class="metric-icon mb-3">⇧</div><h2 class="h5 fw-bold">Choose an .xlsx workbook</h2>
+                    <p class="text-secondary small mb-4">The first worksheet must contain the template headers. Empty rows are ignored, and valid rows can import even when other rows fail.</p>
+                    <form enctype="multipart/form-data" id="uploadForm" novalidate>
+                        <label class="form-label" for="file">Excel file</label>
+                        <input class="form-control" id="file" name="file" type="file" accept=".xlsx" required>
+                        <div class="form-hint mt-2">Required columns: Question, Subject, Topic, Unit, Marks, Difficulty, BloomLevel</div>
+                        <button class="btn btn-primary mt-4" id="uploadButton" type="submit">Upload question bank</button>
+                    </form>
+                </div></section>
+            </div>
+            <div class="col-lg-5"><section class="card h-100"><div class="card-header px-4 py-3">Before you upload</div><div class="card-body px-4">
+                <ul class="small text-secondary ps-3 mb-0">
+                    <li class="mb-3">Create the subjects and topics in the app first. Upload does not create missing curriculum records.</li>
+                    <li class="mb-3">Topic name and unit must match the selected subject.</li>
+                    <li class="mb-3">Difficulty must be EASY, MEDIUM or HARD.</li>
+                    <li class="mb-3">BloomLevel must use one of the six taxonomy values.</li>
+                    <li>Duplicate question text for the same topic is skipped and reported.</li>
+                </ul>
+            </div></section></div>
+        </div>
+        <section id="uploadReport" class="card mt-4 d-none" aria-live="polite">
+            <div class="card-header px-4 py-3">Import report</div>
+            <div class="card-body">
+                <div class="row g-3 mb-3">
+                    <div class="col-4"><div class="metric-label">Rows checked</div><div class="h3 mt-2" id="uploadTotalRows"></div></div>
+                    <div class="col-4"><div class="metric-label">Imported</div><div class="h3 mt-2 text-success" id="uploadImported"></div></div>
+                    <div class="col-4"><div class="metric-label">Failed</div><div class="h3 mt-2 text-danger" id="uploadFailed"></div></div>
+                </div>
+                <div class="table-responsive d-none" id="uploadErrorsContainer"><table class="table"><thead><tr><th>Excel row</th><th>Issue</th></tr></thead><tbody id="uploadErrors"></tbody></table></div>
+                <div id="uploadNoErrors" class="alert alert-success mb-0 d-none">All populated rows were imported successfully.</div>
+                <a class="btn btn-sm btn-outline-secondary mt-3" th:href="@{/questions}">View question bank</a>
+            </div>
+        </section>
+    </main>
+</div>
+<script>
+document.getElementById("uploadForm").addEventListener("submit", (event) => {
+    event.preventDefault();
+    const file = document.getElementById("file").files[0];
+    const message = document.getElementById("uploadMessage");
+    const button = document.getElementById("uploadButton");
+    if (!file || !file.name.toLowerCase().endsWith(".xlsx")) {
+        message.className = "alert alert-warning";
+        message.textContent = "Choose an .xlsx workbook.";
+        return;
+    }
+    const formData = new FormData(event.currentTarget);
+    button.disabled = true;
+    button.innerHTML = '<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Uploading…';
+    message.className = "alert alert-info";
+    message.textContent = "Uploading and validating workbook rows…";
+    fetch("/api/questions/upload", { method: "POST", body: formData })
+        .then(async (response) => {
+            const body = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                const details = Object.values(body.validationErrors || {}).join(" ");
+                throw new Error([body.message, details].filter(Boolean).join(": ") || `Upload failed (${response.status}).`);
+            }
+            return body;
+        })
+        .then((report) => {
+            document.getElementById("uploadTotalRows").textContent = report.totalRows;
+            document.getElementById("uploadImported").textContent = report.successfullyImported;
+            document.getElementById("uploadFailed").textContent = report.failedRows;
+            const errors = document.getElementById("uploadErrors");
+            errors.replaceChildren();
+            (report.errors || []).forEach((error) => {
+                const row = document.createElement("tr");
+                const rowNumber = document.createElement("td");
+                const details = document.createElement("td");
+                rowNumber.textContent = error.rowNumber;
+                details.textContent = error.message;
+                row.append(rowNumber, details);
+                errors.append(row);
+            });
+            document.getElementById("uploadErrorsContainer").classList.toggle("d-none", errors.childElementCount === 0);
+            document.getElementById("uploadNoErrors").classList.toggle("d-none", errors.childElementCount !== 0);
+            document.getElementById("uploadReport").classList.remove("d-none");
+            message.className = `alert ${report.failedRows ? "alert-warning" : "alert-success"}`;
+            message.textContent = `Upload complete: ${report.successfullyImported} imported, ${report.failedRows} failed.`;
+        })
+        .catch((error) => {
+            message.className = "alert alert-danger";
+            message.textContent = error.message || "Upload failed. Please try again.";
+        })
+        .finally(() => {
+            button.disabled = false;
+            button.textContent = "Upload question bank";
+        });
+});
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script><script th:src="@{/js/app.js}"></script>
+</body>
+</html>

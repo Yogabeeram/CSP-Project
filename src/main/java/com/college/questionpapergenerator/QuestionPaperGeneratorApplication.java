@@ -1,0 +1,12 @@
+package com.college.questionpapergenerator;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class QuestionPaperGeneratorApplication {
+
+    public static void main(String[] args) {
+        SpringApplication.run(QuestionPaperGeneratorApplication.class, args);
+    }
+}

@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments/head :: head('AI classification review')}"></head>
+<body>
+<aside th:replace="~{fragments/nav :: sidebar('review')}"></aside>
+<div class="main-shell">
+    <header th:replace="~{fragments/nav :: topbar('AI classification review')}"></header>
+    <main class="main-content">
+        <div class="page-heading"><div><div class="eyebrow">Faculty review</div><h1>Classification review</h1><p>AI classifications are suggestions. Review and approve each question before it can appear on an examination paper.</p></div>
+            <button class="btn btn-primary" id="classifyAllButton" type="button" th:if="${!#lists.isEmpty(questions)}">✦ Classify all</button>
+        </div>
+        <div id="reviewMessage" class="alert d-none" role="status" aria-live="polite"></div>
+        <div class="alert alert-info">Only questions approved by a faculty member can be selected for final examination papers.</div>
+        <section class="card">
+            <div class="card-header px-4 py-3 d-flex justify-content-between"><span>Questions requiring review</span><span id="pendingCount" class="badge-soft" th:text="${#lists.size(questions)} + ' pending'"></span></div>
+            <div class="table-responsive">
+                <table class="table">
+                    <thead><tr><th>Question</th><th>Subject / topic</th><th>AI suggestion</th><th>Faculty decision</th></tr></thead>
+                    <tbody>
+                    <tr th:each="question : ${questions}" data-review-row th:attr="data-question-id=${question.id}">
+                        <td style="min-width:260px"><div class="question-text" th:text="${question.questionText}"></div><div class="small text-secondary mt-1" th:text="${question.marks} + ' marks'"></div></td>
+                        <td><div th:text="${question.subject.subjectName}"></div><div class="small text-secondary" th:text="${question.topic.topicName}"></div></td>
+                        <td><span class="badge-soft" data-difficulty th:text="${question.difficulty != null ? question.difficulty : 'Not classified'}"></span><span class="badge-soft ms-1" data-bloom-level th:text="${question.bloomLevel != null ? question.bloomLevel : 'Not classified'}"></span></td>
+                        <td style="min-width:290px">
+                            <form data-approve-form class="d-flex flex-wrap gap-2">
+                                <select class="form-select form-select-sm" name="difficulty" required style="width:118px"><option th:each="value : ${difficulties}" th:value="${value}" th:text="${value}" th:selected="${value == question.difficulty}"></option></select>
+                                <select class="form-select form-select-sm" name="bloomLevel" required style="width:140px"><option th:each="value : ${bloomLevels}" th:value="${value}" th:text="${value}" th:selected="${value == question.bloomLevel}"></option></select>
+                                <button class="btn btn-sm btn-teal" type="submit">Approve</button>
+                            </form>
+                            <button class="btn btn-sm btn-outline-secondary mt-2" type="button" data-classify-one>✦ Get AI suggestion</button>
+                        </td>
+                    </tr>
+                    <tr th:if="${#lists.isEmpty(questions)}"><td colspan="4"><div class="empty-state"><div class="empty-state-icon">✓</div><div class="fw-semibold text-dark">You’re all caught up</div><div class="small mt-1">New questions and AI suggestions will appear here for faculty approval.</div></div></td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+</div>
+<script>
+const reviewMessage = document.getElementById("reviewMessage");
+
+function showReviewMessage(message, type = "success") {
+    reviewMessage.className = `alert alert-${type}`;
+    reviewMessage.textContent = message;
+}
+
+async function readApiResponse(response) {
+    const body = await response.json().catch(() => ({}));
+    if (!response.ok) {
+        const details = Object.values(body.validationErrors || {}).join(" ");
+        throw new Error([body.message, details].filter(Boolean).join(": ") || `Request failed (${response.status}).`);
+    }
+    return body;
+}
+
+function setButtonLoading(button, label) {
+    const original = button.innerHTML;
+    button.disabled = true;
+    button.innerHTML = `<span class="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>${label}`;
+    return () => {
+        button.disabled = false;
+        button.innerHTML = original;
+    };
+}
+
+document.querySelectorAll("[data-classify-one]").forEach((button) => {
+    button.addEventListener("click", async () => {
+        const row = button.closest("[data-review-row]");
+        const restoreButton = setButtonLoading(button, "Classifying…");
+        try {
+            const result = await readApiResponse(await fetch(`/api/questions/${row.dataset.questionId}/classify`, {
+                method: "POST"
+            }));
+            row.querySelector("[data-difficulty]").textContent = result.difficulty;
+            row.querySelector("[data-bloom-level]").textContent = result.bloomLevel;
+            row.querySelector('[name="difficulty"]').value = result.difficulty;
+            row.querySelector('[name="bloomLevel"]').value = result.bloomLevel;
+            button.remove();
+            showReviewMessage("AI suggestion received. Review or change the values, then approve them before exam use.");
+        } catch (error) {
+            showReviewMessage(error.message || "AI classification failed. Please try again.", "danger");
+            restoreButton();
+        }
+    });
+});
+
+document.querySelectorAll("[data-approve-form]").forEach((form) => {
+    form.addEventListener("submit", async (event) => {
+        event.preventDefault();
+        if (!form.reportValidity()) return;
+        if (!window.confirm("Approve this classification for examination use?")) return;
+        const row = form.closest("[data-review-row]");
+        const button = form.querySelector('button[type="submit"]');
+        const restoreButton = setButtonLoading(button, "Saving…");
+        try {
+            await readApiResponse(await fetch(`/api/questions/${row.dataset.questionId}/classification-review`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    difficulty: form.elements.difficulty.value,
+                    bloomLevel: form.elements.bloomLevel.value
+                })
+            }));
+            row.remove();
+            const remaining = document.querySelectorAll("[data-review-row]").length;
+            document.getElementById("pendingCount").textContent = `${remaining} pending`;
+            showReviewMessage("Classification approved and saved.");
+            if (remaining === 0) window.setTimeout(() => window.location.reload(), 900);
+        } catch (error) {
+            showReviewMessage(error.message || "Could not approve this classification.", "danger");
+            restoreButton();
+        }
+    });
+});
+
+const classifyAllButton = document.getElementById("classifyAllButton");
+if (classifyAllButton) {
+    classifyAllButton.addEventListener("click", async () => {
+        if (!window.confirm("Classify all unapproved questions with AI?")) return;
+        const restoreButton = setButtonLoading(classifyAllButton, "Classifying questions…");
+        try {
+            const report = await readApiResponse(await fetch("/api/questions/classify-all", { method: "POST" }));
+            const failures = (report.failures || []).map((failure) =>
+                `Question ${failure.questionId}: ${failure.message}`).join(" | ");
+            const message = `Classified ${report.classifiedQuestions} of ${report.totalQuestions} questions.`;
+            showReviewMessage(failures ? `${message} ${report.failedQuestions} failed: ${failures}` : message,
+                report.failedQuestions ? "warning" : "success");
+            window.setTimeout(() => window.location.reload(), 2500);
+        } catch (error) {
+            showReviewMessage(error.message || "Batch classification failed.", "danger");
+            restoreButton();
+        }
+    });
+}
+</script>
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script><script th:src="@{/js/app.js}"></script>
+</body>
+</html>
